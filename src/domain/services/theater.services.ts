@@ -2,28 +2,28 @@ import { THEATER_EVENTS } from "../../constants/events/theater.events";
 import { STATUS } from "../../constants/roles";
 import { ForbiddenError } from "../../utils/error";
 import TheaterEntity from "../entities/theater.entity";
- 
-type searchTypes = {userId:string | undefined, searchQuery:string | undefined, page:number | undefined, limit:number | undefined}
-class TheaterService{
-    constructor(private theaterRepository:any, private eventBus:any){}
-    async createTheater(data:any, userId:string){
+
+type searchTypes = { userId: string | undefined, searchQuery: string | undefined, page: number | undefined, limit: number | undefined }
+class TheaterService {
+    constructor(private theaterRepository: any, private eventBus: any) { }
+    async createTheater(data: any, userId: string) {
         const theater = new TheaterEntity(data.name, data.location, userId);
         const result = await this.theaterRepository.createTheater(theater);
         this.eventBus.emit(THEATER_EVENTS.THEATER_CREATED, result);
         return result;
     }
-    async getTheaters({userId, searchQuery, page, limit}:searchTypes){
-        return await this.theaterRepository.getTheaters({userId, searchQuery, page, limit});
+    async getTheaters({ userId, searchQuery, page, limit }: searchTypes) {
+        return await this.theaterRepository.getTheaters({ userId, searchQuery, page, limit });
     }
-    async getTheaterById(id:string){
+    async getTheaterById(id: string) {
         const result = await this.theaterRepository.getTheaterById(id);
 
         return result;
     }
-    async updateTheater(id:string, data:any, isAdmin:boolean, userId:string){
+    async updateTheater(id: string, data: any, isAdmin: boolean, userId: string) {
         const theater = await this.theaterRepository.getTheaterById(id);
-        if(!isAdmin){
-            if(theater.userId !== userId){
+        if (!isAdmin) {
+            if (theater.userId !== userId) {
                 throw new ForbiddenError("You are not authorized to update this theater");
             }
         }
@@ -42,27 +42,27 @@ class TheaterService{
 
         }
         const result = await this.theaterRepository.updateTheater(id, newData);
-        if(isAdmin && newData.status !== theater.status){
+        if (isAdmin && newData.status !== theater.status) {
             this.eventBus.emit(THEATER_EVENTS.THEATER_STATUS_CHANGED, result);
         }
         return result;
     }
-    
-    async deleteTheater(id:string, userId:string, isAdmin:boolean){
-        if(!isAdmin){
+
+    async deleteTheater(id: string, userId: string, isAdmin: boolean) {
+        if (!isAdmin) {
             const theater = await this.theaterRepository.getTheaterById(id);
-            if(theater.userId !== userId){
+            if (theater.userId !== userId) {
                 throw new ForbiddenError("You are not authorized to delete this theater");
             }
         }
         return await this.theaterRepository.deleteTheater(id);
     }
-    async approveOrRejectTheaterApplication(id:string, status:string){
+    async approveOrRejectTheaterApplication(id: string, status: string) {
         const theater = await this.theaterRepository.getTheaterById(id);
-        if(theater.status !== "pending"){
+        if (theater.status !== STATUS.PENDING) {
             throw new ForbiddenError("The theater application is not pending");
         }
-        
+
         const result = await this.theaterRepository.approveOrRejectTheaterApplication(id, status);
         this.eventBus.emit(THEATER_EVENTS.THEATER_STATUS_CHANGED, result);
         return result;
